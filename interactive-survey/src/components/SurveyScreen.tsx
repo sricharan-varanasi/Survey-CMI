@@ -28,7 +28,7 @@ export default function SurveyScreen({ userInfo, onSubmit }: Props) {
 
   useEffect(() => {
     // Fetch questions once
-    fetch("http://127.0.0.1:8000/questions/")
+    fetch("http://18.219.34.26/questions/")
       .then((res) => res.json())
       .then((data: Question[]) => {
         const savedAnswers = localStorage.getItem("survey_answers");
@@ -80,7 +80,7 @@ export default function SurveyScreen({ userInfo, onSubmit }: Props) {
         }),
       };
 
-      fetch("http://127.0.0.1:8000/submit/", {
+      fetch("http://18.219.34.26/submit/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submission),
