@@ -17,7 +17,7 @@ export default function Home() {
     const savedStep = localStorage.getItem("survey_step");
     const savedUser = localStorage.getItem("survey_user");
 
-    if (savedStep) setStep(savedStep as any);
+    if (savedStep) setStep(savedStep as "welcome" | "userinfo" | "survey" | "end");
     if (savedUser) setUserInfo(JSON.parse(savedUser));
   }, []);
 
