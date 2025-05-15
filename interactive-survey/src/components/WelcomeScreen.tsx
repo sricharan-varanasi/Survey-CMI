@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 
+
 type Props = {
   onNext: () => void;
 };

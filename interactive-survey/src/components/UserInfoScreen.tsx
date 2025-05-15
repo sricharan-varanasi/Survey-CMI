@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 
@@ -14,6 +14,26 @@ export default function UserInfoScreen({ onNext }: Props) {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
+
+  // Load from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("survey_user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.name) {
+        setName(parsed.name);
+        setHasEnteredName(true);
+        setStep("age");
+      }
+      if (parsed.age) setAge(parsed.age);
+      if (parsed.gender) setGender(parsed.gender);
+    }
+  }, []);
+
+  // Save to localStorage on update
+  useEffect(() => {
+    localStorage.setItem("survey_user", JSON.stringify({ name, age, gender }));
+  }, [name, age, gender]);
 
   const handleNext = () => {
     if (step === "name" && name.trim() !== "") {

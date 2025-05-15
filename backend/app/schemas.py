@@ -1,6 +1,20 @@
 from pydantic import BaseModel
 from typing import List
 
+class UserCreate(BaseModel):
+    name: str
+    age: int
+    gender: str
+
+class ResponseCreate(BaseModel):
+    question_id: int
+    answer: str
+    raw_score: int
+
+class FullSubmission(BaseModel):
+    user: UserCreate
+    responses: List[ResponseCreate]
+
 class OptionCreate(BaseModel):
     text: str
     raw_score: int

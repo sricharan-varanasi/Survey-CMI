@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import LoadingScreen from "@/components/LoadingScreen";
 
 type Option = {
   id: number;
@@ -16,25 +17,41 @@ type Question = {
 };
 
 type Props = {
+  userInfo: { name: string; age: string; gender: string };
   onSubmit: () => void;
 };
 
-export default function SurveyScreen({ onSubmit }: Props) {
+export default function SurveyScreen({ userInfo, onSubmit }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
 
   useEffect(() => {
+    // Fetch questions once
     fetch("http://127.0.0.1:8000/questions/")
       .then((res) => res.json())
       .then((data: Question[]) => {
+        const savedAnswers = localStorage.getItem("survey_answers");
+        const savedIndex = localStorage.getItem("survey_index");
+
         setQuestions(data);
-        setAnswers(Array(data.length).fill(""));
+        setAnswers(
+          savedAnswers ? JSON.parse(savedAnswers) : Array(data.length).fill("")
+        );
+        setCurrentIndex(
+          savedIndex ? Math.min(parseInt(savedIndex), data.length - 1) : 0
+        );
       });
   }, []);
 
-  if (questions.length === 0)
-    return <div className="text-white p-4">Loading...</div>;
+  useEffect(() => {
+    if (questions.length > 0) {
+      localStorage.setItem("survey_answers", JSON.stringify(answers));
+      localStorage.setItem("survey_index", currentIndex.toString());
+    }
+  }, [answers, currentIndex, questions.length]);
+
+  if (questions.length === 0) return <LoadingScreen />;
 
   const currentQuestion = questions[currentIndex];
 
@@ -46,8 +63,36 @@ export default function SurveyScreen({ onSubmit }: Props) {
 
   const handleNext = () => {
     if (currentIndex === questions.length - 1) {
-      console.log("Final Answers:", answers);
-      onSubmit();
+      const submission = {
+        user: {
+          name: userInfo.name,
+          age: parseInt(userInfo.age),
+          gender: userInfo.gender,
+        },
+        responses: questions.map((q, i) => {
+          const selected = answers[i];
+          const matched = q.options.find((opt) => opt.text === selected);
+          return {
+            question_id: q.id,
+            answer: selected,
+            raw_score: matched ? matched.raw_score : 0,
+          };
+        }),
+      };
+
+      fetch("http://127.0.0.1:8000/submit/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submission),
+      })
+        .then((res) => res.json())
+        .then(() => {
+          localStorage.clear(); // Clear all saved progress
+          onSubmit();
+        })
+        .catch((err) => {
+          console.error("❌ Submission failed:", err);
+        });
     } else {
       setCurrentIndex(currentIndex + 1);
     }
