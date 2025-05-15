@@ -91,7 +91,7 @@ export default function SurveyScreen({ userInfo, onSubmit }: Props) {
           onSubmit();
         })
         .catch((err) => {
-          console.error("❌ Submission failed:", err);
+          console.error("Submission failed:", err);
         });
     } else {
       setCurrentIndex(currentIndex + 1);
