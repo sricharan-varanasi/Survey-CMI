@@ -1,56 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-const surveyQuestions = [
-  {
-    id: "Q1",
-    question: "How often do you feel anxious?",
-    options: ["Never", "Rarely", "Sometimes", "Always"],
-  },
-  {
-    id: "Q2",
-    question: "How well do you sleep at night?",
-    options: ["Very well", "Okay", "Poorly", "Terribly"],
-  },
-  {
-    id: "Q3",
-    question: "Do you feel energetic during the day?",
-    options: ["Always", "Often", "Sometimes", "Never"],
-  },
-  {
-    id: "Q4",
-    question: "How often do you feel distracted?",
-    options: ["Rarely", "Sometimes", "Often", "Always"],
-  },
-  {
-    id: "Q5",
-    question: "Do you find it easy to focus on tasks?",
-    options: ["Very Easy", "Somewhat Easy", "Hard", "Very Hard"],
-  },
-];
+type Option = {
+  id: number;
+  text: string;
+  raw_score: number;
+};
+
+type Question = {
+  id: number;
+  text: string;
+  options: Option[];
+};
 
 type Props = {
   onSubmit: () => void;
 };
 
 export default function SurveyScreen({ onSubmit }: Props) {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>(
-    Array(surveyQuestions.length).fill("")
-  );
+  const [answers, setAnswers] = useState<string[]>([]);
 
-  const currentQuestion = surveyQuestions[currentIndex];
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/questions/")
+      .then((res) => res.json())
+      .then((data: Question[]) => {
+        setQuestions(data);
+        setAnswers(Array(data.length).fill(""));
+      });
+  }, []);
+
+  if (questions.length === 0)
+    return <div className="text-white p-4">Loading...</div>;
+
+  const currentQuestion = questions[currentIndex];
 
   const handleOptionSelect = (option: string) => {
-    const updatedAnswers = [...answers];
-    updatedAnswers[currentIndex] = option;
-    setAnswers(updatedAnswers);
+    const updated = [...answers];
+    updated[currentIndex] = option;
+    setAnswers(updated);
   };
 
   const handleNext = () => {
-    if (currentIndex === surveyQuestions.length - 1) {
+    if (currentIndex === questions.length - 1) {
       console.log("Final Answers:", answers);
       onSubmit();
     } else {
@@ -59,9 +54,7 @@ export default function SurveyScreen({ onSubmit }: Props) {
   };
 
   const handleBack = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
+    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
   };
 
   const goTo = (index: number) => setCurrentIndex(index);
@@ -71,19 +64,17 @@ export default function SurveyScreen({ onSubmit }: Props) {
       <div className="h-full w-full border-4 border-white rounded-xl flex flex-col justify-between px-6 py-6 text-white">
         {/* Top Navigation */}
         <div className="flex justify-center gap-2 mb-6">
-          {surveyQuestions.map((_, i) => (
+          {questions.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
-              className={`w-8 h-8 text-sm font-bold rounded-full flex items-center justify-center border-2
-                ${
-                  currentIndex === i
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : answers[i]
-                    ? "border-green-400 text-white"
-                    : "border-white text-white"
-                }
-              `}
+              className={`w-8 h-8 text-sm font-bold rounded-full flex items-center justify-center border-2 ${
+                currentIndex === i
+                  ? "bg-blue-600 border-blue-600"
+                  : answers[i]
+                  ? "border-green-400"
+                  : "border-white"
+              }`}
             >
               {i + 1}
             </button>
@@ -98,19 +89,19 @@ export default function SurveyScreen({ onSubmit }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-xl font-bold mb-4">{currentQuestion.question}</h2>
+          <h2 className="text-xl font-bold mb-4">{currentQuestion.text}</h2>
           <div className="grid grid-cols-1 gap-2">
             {currentQuestion.options.map((option) => (
               <button
-                key={option}
-                onClick={() => handleOptionSelect(option)}
+                key={option.id}
+                onClick={() => handleOptionSelect(option.text)}
                 className={`py-2 px-4 border rounded-md transition-all ${
-                  answers[currentIndex] === option
+                  answers[currentIndex] === option.text
                     ? "bg-blue-600 border-blue-600 text-white"
                     : "bg-transparent border-gray-400 hover:border-white hover:bg-white hover:text-black"
                 }`}
               >
-                {option}
+                {option.text}
               </button>
             ))}
           </div>
@@ -143,7 +134,7 @@ export default function SurveyScreen({ onSubmit }: Props) {
                 : "bg-gray-600 text-white hover:bg-gray-700"
             }`}
           >
-            {currentIndex === surveyQuestions.length - 1
+            {currentIndex === questions.length - 1
               ? answers[currentIndex]
                 ? "Submit your survey"
                 : "Skip"
