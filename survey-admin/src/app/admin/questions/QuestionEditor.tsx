@@ -1,6 +1,6 @@
 "use client";
 
-import { Option, Question } from "./page";
+import { Question } from "./page";
 import { Dispatch, SetStateAction } from "react";
 
 interface Props {
