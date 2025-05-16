@@ -70,7 +70,9 @@ export default function SubscalesPage() {
     });
 
     if (res.ok) {
+      const updated = await res.json(); // get updated subscale from backend
       await fetchSubscales();
+      setSelected(updated); // update selected to reflect saved changes
       setIsEditing(false);
       setEditing(null);
       setIsAdding(false);
