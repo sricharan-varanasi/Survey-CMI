@@ -24,6 +24,20 @@ type Response = {
   question: Question;
 };
 
+type Subscale = {
+  id: number;
+  name: string;
+  method: "sum" | "average";
+  question_ids: number[];
+};
+
+type NormEntry = {
+  age: number;
+  sex: string;
+  raw_score: number;
+  normalized_score: number;
+};
+
 export default function NormalizationPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -32,10 +46,15 @@ export default function NormalizationPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [responses, setResponses] = useState<Response[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [subscale, setSubscale] = useState<Subscale | null>(null);
+  const [normalizationData, setNormalizationData] = useState<NormEntry[]>([]);
 
   useEffect(() => {
     if (!user) router.push("/");
-    else fetchUsers();
+    else {
+      fetchUsers();
+      fetchSubscale();
+    }
   }, [user]);
 
   const fetchUsers = async () => {
@@ -69,19 +88,68 @@ export default function NormalizationPage() {
     }
   };
 
+  const fetchSubscale = async () => {
+    try {
+      const res = await fetch("https://survey-cmi.site/subscales/");
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setSubscale(data[0]);
+        fetchNormalizationTable(data[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch subscale:", err);
+    }
+  };
+
+  const fetchNormalizationTable = async (subscaleId: number) => {
+    try {
+      const res = await fetch(
+        `https://survey-cmi.site/subscales/${subscaleId}/normalization-table/`
+      );
+      const data = await res.json();
+      if (Array.isArray(data)) setNormalizationData(data);
+    } catch (err) {
+      console.error("Failed to fetch normalization table:", err);
+    }
+  };
+
+  const computeRawScore = () => {
+    if (!subscale) return 0;
+    const relevant = responses.filter((r) =>
+      subscale.question_ids.includes(r.question_id)
+    );
+    const values = relevant.map((r) => r.raw_score);
+    if (subscale.method === "sum") return values.reduce((a, b) => a + b, 0);
+    if (subscale.method === "average")
+      return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+    return 0;
+  };
+
+  const getNormalizationScore = (raw: number) => {
+    if (!selectedUser) return null;
+    const entry = normalizationData.find(
+      (e) =>
+        e.raw_score === raw &&
+        e.age === selectedUser.age &&
+        e.sex === selectedUser.gender
+    );
+    return entry?.normalized_score ?? null;
+  };
+
   const handleUserClick = (u: User) => {
     setSelectedUser(u);
     fetchResponses(u.id);
   };
 
   const current = responses[currentIdx];
+  const totalRaw = computeRawScore();
+  const normScore = getNormalizationScore(totalRaw);
 
   if (!user) return null;
 
   return (
     <div className="h-screen w-screen bg-[#faebd7] p-4 box-border">
       <div className="h-full w-full border-4 border-black rounded-xl flex flex-col relative">
-        {/* Top-right user dropdown */}
         <div className="absolute top-4 right-6">
           <details className="cursor-pointer text-black">
             <summary className="hover:text-yellow-600">Welcome, {user}</summary>
@@ -127,7 +195,6 @@ export default function NormalizationPage() {
         <div className="border-b border-black w-full" />
 
         <main className="flex flex-1 overflow-hidden">
-          {/* Sidebar with users */}
           <div className="w-1/3 p-4 border-r border-black overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">Survey Users</h2>
             {Array.isArray(users) &&
@@ -146,7 +213,6 @@ export default function NormalizationPage() {
               ))}
           </div>
 
-          {/* Flashcard Viewer */}
           <div className="w-2/3 p-6">
             {selectedUser && (
               <>
@@ -166,13 +232,8 @@ export default function NormalizationPage() {
                       <h3 className="text-md font-medium mt-4">Answer:</h3>
                       <p className="text-blue-600">{current.answer}</p>
 
-                      <div className="mt-6 p-3 bg-gray-100 border rounded">
-                        <strong>Raw Score:</strong> {current.raw_score} <br />
-                        <strong>Normalization Score:</strong>{" "}
-                        <span className="text-sm text-gray-500">
-                          (To be implemented)
-                        </span>
-                      </div>
+                      <h3 className="text-md font-medium mt-4">Raw Score:</h3>
+                      <p className="text-black">{current.raw_score}</p>
                     </div>
 
                     <div className="flex justify-between">
@@ -194,6 +255,14 @@ export default function NormalizationPage() {
                       >
                         Next
                       </button>
+                    </div>
+
+                    <div className="mt-6 p-4 bg-gray-100 border rounded">
+                      <strong>Total Raw Score:</strong> {totalRaw} <br />
+                      <strong>Normalization Score:</strong>{" "}
+                      {normScore ?? (
+                        <span className="text-red-500">Not found</span>
+                      )}
                     </div>
                   </div>
                 ) : (
