@@ -46,6 +46,7 @@ export default function NormalizationPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [responses, setResponses] = useState<Response[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [subscales, setSubscales] = useState<Subscale[]>([]);
   const [subscale, setSubscale] = useState<Subscale | null>(null);
   const [normalizationData, setNormalizationData] = useState<NormEntry[]>([]);
 
@@ -53,63 +54,56 @@ export default function NormalizationPage() {
     if (!user) router.push("/");
     else {
       fetchUsers();
-      fetchSubscale();
+      fetchSubscales();
     }
   }, [user]);
 
   const fetchUsers = async () => {
-    try {
-      const res = await fetch("https://survey-cmi.site/users/");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setUsers(data);
-        if (data.length > 0) {
-          setSelectedUser(data[0]);
-          fetchResponses(data[0].id);
-        }
+    const res = await fetch("https://survey-cmi.site/users/");
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      setUsers(data);
+      if (data.length > 0) {
+        setSelectedUser(data[0]);
+        fetchResponses(data[0].id);
       }
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
     }
   };
 
   const fetchResponses = async (userId: number) => {
-    try {
-      const res = await fetch(
-        `https://survey-cmi.site/users/${userId}/responses`
-      );
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setResponses(data);
-        setCurrentIdx(0);
-      }
-    } catch (err) {
-      console.error("Failed to fetch responses:", err);
+    const res = await fetch(
+      `https://survey-cmi.site/users/${userId}/responses`
+    );
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      setResponses(data);
+      setCurrentIdx(0);
     }
   };
 
-  const fetchSubscale = async () => {
-    try {
-      const res = await fetch("https://survey-cmi.site/subscales/");
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setSubscale(data[0]);
-        fetchNormalizationTable(data[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to fetch subscale:", err);
+  const fetchSubscales = async () => {
+    const res = await fetch("https://survey-cmi.site/subscales/");
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      setSubscales(data);
+      setSubscale(data[0]);
+      fetchNormalizationTable(data[0].id);
     }
   };
 
   const fetchNormalizationTable = async (subscaleId: number) => {
-    try {
-      const res = await fetch(
-        `https://survey-cmi.site/subscales/${subscaleId}/normalization-table/`
-      );
-      const data = await res.json();
-      if (Array.isArray(data)) setNormalizationData(data);
-    } catch (err) {
-      console.error("Failed to fetch normalization table:", err);
+    const res = await fetch(
+      `https://survey-cmi.site/subscales/${subscaleId}/normalization-table/`
+    );
+    const data = await res.json();
+    if (Array.isArray(data)) setNormalizationData(data);
+  };
+
+  const handleSubscaleChange = (id: number) => {
+    const found = subscales.find((s) => s.id === id);
+    if (found) {
+      setSubscale(found);
+      fetchNormalizationTable(found.id);
     }
   };
 
@@ -195,22 +189,21 @@ export default function NormalizationPage() {
         <div className="border-b border-black w-full" />
 
         <main className="flex flex-1 overflow-hidden">
-          <div className="w-1/3 p-4 border-r border-black overflow-y-auto">
+          <div className="w-1/3 p-4 border-r border-black overflow-y-auto scrollbar-thin scrollbar-thumb-black scrollbar-track-transparent">
             <h2 className="text-xl font-semibold mb-4">Survey Users</h2>
-            {Array.isArray(users) &&
-              users.map((u) => (
-                <div
-                  key={u.id}
-                  className={`p-2 mb-2 rounded cursor-pointer ${
-                    selectedUser?.id === u.id
-                      ? "bg-black text-white"
-                      : "hover:bg-gray-200"
-                  }`}
-                  onClick={() => handleUserClick(u)}
-                >
-                  {u.name}
-                </div>
-              ))}
+            {users.map((u) => (
+              <div
+                key={u.id}
+                className={`p-2 mb-2 rounded cursor-pointer ${
+                  selectedUser?.id === u.id
+                    ? "bg-black text-white"
+                    : "hover:bg-gray-200"
+                }`}
+                onClick={() => handleUserClick(u)}
+              >
+                {u.name}
+              </div>
+            ))}
           </div>
 
           <div className="w-2/3 p-6">
@@ -221,6 +214,25 @@ export default function NormalizationPage() {
                     {selectedUser.name} — Age {selectedUser.age},{" "}
                     {selectedUser.gender}
                   </h2>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block font-medium mb-1">
+                    Choose Subscale:
+                  </label>
+                  <select
+                    className="p-2 border rounded"
+                    value={subscale?.id || ""}
+                    onChange={(e) =>
+                      handleSubscaleChange(Number(e.target.value))
+                    }
+                  >
+                    {subscales.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {responses.length > 0 && current ? (
