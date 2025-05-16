@@ -65,3 +65,17 @@ class SubscaleOut(SubscaleBase):
 
     class Config:
         orm_mode = True
+
+# ----------------------------
+# Normalization Table Management
+# ----------------------------
+
+class NormalizationEntryOut(BaseModel):
+    age: int
+    sex: str
+    raw_score: int
+    normalized_score: int
+
+    class Config:
+        orm_mode = True
+

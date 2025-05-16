@@ -14,7 +14,6 @@ engine = create_engine(DATABASE_URL)
 # Configure session
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-# Declare base for models
 Base = declarative_base()
 
 # ✅ Dependency for DB session (used with Depends)

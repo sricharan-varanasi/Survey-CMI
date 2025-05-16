@@ -39,6 +39,19 @@ class Subscale(Base):
     method = Column(String, nullable=False)  # "sum" or "average"
     question_ids = Column(ARRAY(Integer), nullable=False)  # Selected question IDs
 
+class NormalizationEntry(Base):
+    __tablename__ = "normalization_table"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscale_id = Column(Integer, ForeignKey("subscales.id"))
+    age = Column(Integer, nullable=False)
+    sex = Column(String, nullable=False)
+    raw_score = Column(Integer, nullable=False)
+    normalized_score = Column(Integer, nullable=False)
+
+    subscale = relationship("Subscale", backref="normalization_entries")
+
+
 class Response(Base):
     __tablename__ = "responses"
 

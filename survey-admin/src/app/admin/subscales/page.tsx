@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Question, Subscale } from "./SubscaleTypes";
 import SubscaleEditor from "./SubscaleEditor";
+import NormalizationViewer from "./NormalizationViewer";
 
 export default function SubscalesPage() {
   const { user, logout } = useAuth();
@@ -17,6 +18,7 @@ export default function SubscalesPage() {
   const [editing, setEditing] = useState<Subscale | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [viewingTable, setViewingTable] = useState(false);
 
   useEffect(() => {
     if (!user) router.push("/");
@@ -30,7 +32,7 @@ export default function SubscalesPage() {
     const res = await fetch("https://survey-cmi.site/subscales/");
     const data = await res.json();
     setSubscales(data);
-    if (!selected && data.length) setSelected(data[0]);
+    if (!selected && data.length > 0) setSelected(data[0]);
   };
 
   const fetchQuestions = async () => {
@@ -50,6 +52,7 @@ export default function SubscalesPage() {
     setIsEditing(false);
     setEditing(null);
     setIsAdding(false);
+    setViewingTable(false);
     if (subscales.length > 0) setSelected(subscales[0]);
   };
 
@@ -149,6 +152,7 @@ export default function SubscalesPage() {
                   setEditing(null);
                   setIsEditing(false);
                   setIsAdding(false);
+                  setViewingTable(false);
                 }}
               >
                 {s.name}
@@ -157,19 +161,40 @@ export default function SubscalesPage() {
           </div>
 
           <div className="w-2/3 p-6 overflow-y-auto">
-            <SubscaleEditor
-              subscale={isEditing ? editing : selected}
-              isEditing={isEditing}
-              isNew={isAdding}
-              questions={questions}
-              setSubscale={setEditing}
-              onEdit={() => {
-                setEditing(JSON.parse(JSON.stringify(selected)));
-                setIsEditing(true);
-              }}
-              onCancel={handleCancel}
-              onSave={handleSave}
-            />
+            {viewingTable && selected ? (
+              <NormalizationViewer
+                subscaleId={selected.id!}
+                subscaleName={selected.name}
+                onBack={() => setViewingTable(false)}
+              />
+            ) : (
+              <>
+                <SubscaleEditor
+                  subscale={isEditing ? editing : selected}
+                  isEditing={isEditing}
+                  isNew={isAdding}
+                  questions={questions}
+                  setSubscale={setEditing}
+                  onEdit={() => {
+                    setEditing(JSON.parse(JSON.stringify(selected)));
+                    setIsEditing(true);
+                  }}
+                  onCancel={handleCancel}
+                  onSave={handleSave}
+                />
+
+                {!isEditing && !isAdding && selected && (
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => setViewingTable(true)}
+                      className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded"
+                    >
+                      View Normalization Table
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </main>
       </div>

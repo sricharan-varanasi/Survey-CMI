@@ -1,7 +1,7 @@
 "use client";
 
 import { Subscale, Question } from "./SubscaleTypes";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 interface Props {
   subscale: Subscale | null;
@@ -24,14 +24,34 @@ export default function SubscaleEditor({
   onSave,
   onCancel,
 }: Props) {
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+
   if (!subscale) return null;
 
   const toggleQuestion = (id: number) => {
-    const current = subscale.question_ids;
-    const updated = current.includes(id)
-      ? current.filter((q) => q !== id)
-      : [...current, id];
+    const updated = subscale.question_ids.includes(id)
+      ? subscale.question_ids.filter((q) => q !== id)
+      : [...subscale.question_ids, id];
     setSubscale({ ...subscale, question_ids: updated });
+  };
+
+  const handleFileUpload = async () => {
+    if (!csvFile || !subscale.id) return;
+    const formData = new FormData();
+    formData.append("file", csvFile);
+    const res = await fetch(
+      `https://survey-cmi.site/subscales/${subscale.id}/upload-normalization/`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    if (res.ok) {
+      alert("Normalization table uploaded successfully.");
+      setCsvFile(null);
+    } else {
+      alert("Upload failed.");
+    }
   };
 
   return (
@@ -89,6 +109,46 @@ export default function SubscaleEditor({
           ))}
         </div>
       </div>
+
+      {isEditing && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-black mb-1">
+            Upload Normalization Table (.csv)
+          </label>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => document.getElementById("csvInput")?.click()}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+            >
+              Choose File
+            </button>
+            <span className="text-sm text-gray-700">
+              {csvFile ? csvFile.name : "No file chosen"}
+            </span>
+          </div>
+
+          <input
+            id="csvInput"
+            type="file"
+            accept=".csv"
+            onChange={(e) => {
+              if (e.target.files) setCsvFile(e.target.files[0]);
+            }}
+            className="hidden"
+          />
+
+          {csvFile && subscale.id && (
+            <div className="mt-2">
+              <button
+                onClick={handleFileUpload}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+              >
+                Upload CSV
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end gap-4 mt-6">
         {!isEditing ? (

@@ -47,3 +47,32 @@ def delete_subscale(id: int, db: Session = Depends(get_db)):
     db.delete(db_sub)
     db.commit()
     return None
+
+@router.post("/{subscale_id}/upload-normalization/")
+async def upload_normalization_table(subscale_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+
+    contents = await file.read()
+    decoded = contents.decode("utf-8").splitlines()
+    reader = csv.DictReader(decoded)
+
+    # Optional: Clear existing entries
+    db.query(models.NormalizationEntry).filter_by(subscale_id=subscale_id).delete()
+
+    for row in reader:
+        entry = models.NormalizationEntry(
+            subscale_id=subscale_id,
+            age=int(row["age"]),
+            sex=row["sex"],
+            raw_score=int(row["raw_score"]),
+            normalized_score=int(row["normalized_score"]),
+        )
+        db.add(entry)
+    db.commit()
+    return {"detail": "Normalization table uploaded successfully"}
+
+@router.get("/{subscale_id}/normalization-table/", response_model=List[schemas.NormalizationEntryOut])
+def get_normalization_table(subscale_id: int, db: Session = Depends(get_db)):
+    return db.query(models.NormalizationEntry).filter_by(subscale_id=subscale_id).all()
+
