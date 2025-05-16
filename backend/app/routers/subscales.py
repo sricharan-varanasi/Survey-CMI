@@ -2,51 +2,33 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
-from fastapi import status
+import csv
 from typing import List
 
-router = APIRouter(
-    prefix="/subscales",
-    tags=["Subscales"]
-)
+router = APIRouter(prefix="/subscales", tags=["Subscales"])
 
-# GET all subscales
 @router.get("/", response_model=List[schemas.SubscaleOut])
 def get_subscales(db: Session = Depends(get_db)):
     return db.query(models.Subscale).all()
 
-# POST new subscale
 @router.post("/", response_model=schemas.SubscaleOut)
 def create_subscale(subscale: schemas.SubscaleCreate, db: Session = Depends(get_db)):
-    db_subscale = models.Subscale(**subscale.dict())
-    db.add(db_subscale)
+    db_sub = models.Subscale(**subscale.dict())
+    db.add(db_sub)
     db.commit()
-    db.refresh(db_subscale)
-    return db_subscale
+    db.refresh(db_sub)
+    return db_sub
 
-# PATCH (update) subscale by ID
-@router.patch("/{subscale_id}", response_model=schemas.SubscaleOut)
-def update_subscale(subscale_id: int, subscale: schemas.SubscaleUpdate, db: Session = Depends(get_db)):
-    db_subscale = db.query(models.Subscale).filter(models.Subscale.id == subscale_id).first()
-    if not db_subscale:
-        raise HTTPException(status_code=404, detail="Subscale not found")
-
-    for key, value in subscale.dict().items():
-        setattr(db_subscale, key, value)
-
-    db.commit()
-    db.refresh(db_subscale)
-    return db_subscale
-
-@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_subscale(id: int, db: Session = Depends(get_db)):
+@router.patch("/{id}", response_model=schemas.SubscaleOut)
+def update_subscale(id: int, subscale: schemas.SubscaleUpdate, db: Session = Depends(get_db)):
     db_sub = db.query(models.Subscale).filter(models.Subscale.id == id).first()
     if not db_sub:
         raise HTTPException(status_code=404, detail="Subscale not found")
-
-    db.delete(db_sub)
+    for key, value in subscale.dict(exclude_unset=True).items():
+        setattr(db_sub, key, value)
     db.commit()
-    return None
+    db.refresh(db_sub)
+    return db_sub
 
 @router.post("/{subscale_id}/upload-normalization/")
 async def upload_normalization_table(subscale_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -57,7 +39,6 @@ async def upload_normalization_table(subscale_id: int, file: UploadFile = File(.
     decoded = contents.decode("utf-8").splitlines()
     reader = csv.DictReader(decoded)
 
-    # Optional: Clear existing entries
     db.query(models.NormalizationEntry).filter_by(subscale_id=subscale_id).delete()
 
     for row in reader:
@@ -75,4 +56,3 @@ async def upload_normalization_table(subscale_id: int, file: UploadFile = File(.
 @router.get("/{subscale_id}/normalization-table/", response_model=List[schemas.NormalizationEntryOut])
 def get_normalization_table(subscale_id: int, db: Session = Depends(get_db)):
     return db.query(models.NormalizationEntry).filter_by(subscale_id=subscale_id).all()
-
