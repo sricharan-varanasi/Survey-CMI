@@ -1,24 +1,86 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { Question, Subscale } from "./SubscaleTypes";
+import SubscaleEditor from "./SubscaleEditor";
 
 export default function SubscalesPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
+  const [subscales, setSubscales] = useState<Subscale[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [selected, setSelected] = useState<Subscale | null>(null);
+  const [editing, setEditing] = useState<Subscale | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+
   useEffect(() => {
     if (!user) router.push("/");
+    else {
+      fetchSubscales();
+      fetchQuestions();
+    }
   }, [user]);
+
+  const fetchSubscales = async () => {
+    const res = await fetch("https://survey-cmi.site/subscales/");
+    const data = await res.json();
+    setSubscales(data);
+    if (!selected && data.length) setSelected(data[0]);
+  };
+
+  const fetchQuestions = async () => {
+    const res = await fetch("https://survey-cmi.site/questions/");
+    const data = await res.json();
+    setQuestions(data);
+  };
+
+  const handleAddNew = () => {
+    setIsAdding(true);
+    setIsEditing(true);
+    setEditing({ name: "", method: "sum", question_ids: [] });
+    setSelected(null);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditing(null);
+    setIsAdding(false);
+    if (subscales.length > 0) setSelected(subscales[0]);
+  };
+
+  const handleSave = async () => {
+    if (!editing) return;
+    const method = isAdding ? "POST" : "PATCH";
+    const url = isAdding
+      ? "https://survey-cmi.site/subscales/"
+      : `https://survey-cmi.site/subscales/${editing.id}`;
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editing),
+    });
+
+    if (res.ok) {
+      await fetchSubscales();
+      setIsEditing(false);
+      setEditing(null);
+      setIsAdding(false);
+    } else {
+      alert("Failed to save subscale");
+    }
+  };
 
   if (!user) return null;
 
   return (
     <div className="h-screen w-screen bg-[#faebd7] p-4 box-border">
       <div className="h-full w-full border-4 border-black rounded-xl flex flex-col relative">
-        {/* User dropdown */}
         <div className="absolute top-4 right-6">
           <details className="cursor-pointer text-black">
             <summary className="hover:text-yellow-600">Welcome, {user}</summary>
@@ -32,14 +94,12 @@ export default function SubscalesPage() {
           </details>
         </div>
 
-        {/* Title */}
         <div className="text-center py-6">
           <h1 className="text-3xl font-bold text-black">
             Survey Administrator
           </h1>
         </div>
 
-        {/* Navigation Bar */}
         <nav className="flex justify-center gap-10 text-black text-md font-medium pb-2">
           <Link href="/admin" className="hover:underline underline-offset-4">
             Home
@@ -63,26 +123,53 @@ export default function SubscalesPage() {
             Normalization
           </Link>
         </nav>
-
-        {/* Bottom border */}
         <div className="border-b border-black w-full" />
 
-        {/* Main content */}
-        <main className="flex-1 flex items-center justify-center px-10 text-black">
-          <div className="max-w-3xl w-full text-center space-y-4">
-            <h2 className="text-2xl font-semibold">Subscale Management</h2>
-            <p className="text-md">
-              Define and manage subscales, which group specific questions and
-              specify how to calculate scores using methods like{" "}
-              <strong>sum</strong> or <strong>average</strong>. These subscales
-              are used to generate raw scores for normalization.
-            </p>
-            <p className="text-md">
-              Later, you'll be able to create new subscales, assign questions to
-              them, and specify the scoring logic. For now, this page serves as
-              a placeholder for future subscale creation and editing
-              functionality.
-            </p>
+        <main className="flex flex-1 overflow-hidden">
+          <div className="w-1/3 p-4 border-r border-black overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Subscales</h2>
+              <button
+                onClick={handleAddNew}
+                className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+              >
+                + Add
+              </button>
+            </div>
+            {subscales.map((s) => (
+              <div
+                key={s.id}
+                className={`p-2 mb-2 rounded cursor-pointer ${
+                  selected?.id === s.id
+                    ? "bg-black text-white"
+                    : "hover:bg-gray-200"
+                }`}
+                onClick={() => {
+                  setSelected(s);
+                  setEditing(null);
+                  setIsEditing(false);
+                  setIsAdding(false);
+                }}
+              >
+                {s.name}
+              </div>
+            ))}
+          </div>
+
+          <div className="w-2/3 p-6 overflow-y-auto">
+            <SubscaleEditor
+              subscale={isEditing ? editing : selected}
+              isEditing={isEditing}
+              isNew={isAdding}
+              questions={questions}
+              setSubscale={setEditing}
+              onEdit={() => {
+                setEditing(JSON.parse(JSON.stringify(selected)));
+                setIsEditing(true);
+              }}
+              onCancel={handleCancel}
+              onSave={handleSave}
+            />
           </div>
         </main>
       </div>
