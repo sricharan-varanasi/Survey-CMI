@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
+type Props = {
+  subscaleId: number;
+  subscaleName: string;
+  onBack: () => void;
+};
+
 type User = {
   id: number;
   name: string;
@@ -38,7 +44,9 @@ type NormEntry = {
   normalized_score: number;
 };
 
-export default function NormalizationPage() {
+
+
+export default function NormalizationPage({ subscaleId, subscaleName, onBack }: Props) {
   const { user, logout } = useAuth();
   const router = useRouter();
 

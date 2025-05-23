@@ -8,6 +8,7 @@ import { Question, Subscale } from "./SubscaleTypes";
 import SubscaleEditor from "./SubscaleEditor";
 import NormalizationViewer from "./NormalizationViewer";
 
+
 export default function SubscalesPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
