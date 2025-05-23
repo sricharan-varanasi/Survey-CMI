@@ -56,7 +56,7 @@ export default function NormalizationViewer({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-black">
-          Normalization Table of "{subscaleName}"
+          Normalization Table of &quot;{subscaleName}&quot;
         </h2>
         <button
           onClick={onBack}
